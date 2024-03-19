@@ -1,0 +1,101 @@
+version: "3.9"
+
+services:
+  app_1:
+    container_name: app_1
+    restart: always
+    build:
+      context: .
+    ports:
+      - "${FA_PORT_1}:${FA_PORT_1}"
+    env_file:
+      - ./.env
+    environment:
+      - FA_PORT=${FA_PORT_1}
+    command: "sh start.sh"
+    volumes:
+      - ./:/code
+
+  app_2:
+    container_name: app_2
+    restart: always
+    build:
+      context: .
+    ports:
+      - "${FA_PORT_2}:${FA_PORT_2}"
+    env_file:
+      - ./.env
+    environment:
+      - FA_PORT=${FA_PORT_2}
+    command: "sh start.sh"
+    volumes:
+      - ./:/code
+  
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - app_1
+      - app_2
+
+  pg-0:
+    container_name: pg-0
+    image: bitnami/postgresql-repmgr:14
+    ports:
+      - 5432
+    volumes:
+      - pg_0_data:/bitnami/postgresql
+    env_file:
+      - ./.env
+    environment:
+      - REPMGR_PASSWORD=repmgrpassword
+      - REPMGR_PRIMARY_HOST=pg-0
+      - REPMGR_PARTNER_NODES=pg-0,pg-1
+      - REPMGR_NODE_NAME=pg-0
+      - REPMGR_NODE_NETWORK_NAME=pg-0
+
+  pg-1:
+    container_name: pg-1
+    image: bitnami/postgresql-repmgr:14
+    ports:
+      - 5432
+    volumes:
+      - pg_1_data:/bitnami/postgresql
+    env_file:
+      - ./.env
+    environment:
+      - REPMGR_PASSWORD=repmgrpassword
+      - REPMGR_PRIMARY_HOST=pg-0
+      - REPMGR_PARTNER_NODES=pg-0,pg-1
+      - REPMGR_NODE_NAME=pg-1
+      - REPMGR_NODE_NETWORK_NAME=pg-1
+
+  pgpool:
+    container_name: pgpool
+    image: bitnami/pgpool:4
+    ports:
+      - ${PGPOOL_PORT_EXTERNAL}:${PGPOOL_PORT}
+    environment:
+      - PGPOOL_BACKEND_NODES=0:pg-0:5432,1:pg-1:5432
+      - PGPOOL_SR_CHECK_USER=postgres
+      - PGPOOL_SR_CHECK_PASSWORD=postgres
+      - PGPOOL_ENABLE_LDAP=no
+      - PGPOOL_POSTGRES_USERNAME=postgres
+      - PGPOOL_POSTGRES_PASSWORD=postgres
+      - PGPOOL_ADMIN_USERNAME=postgres
+      - PGPOOL_ADMIN_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD", "/opt/bitnami/scripts/pgpool/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_0_data:
+    driver: local
+  pg_1_data:
+    driver: local

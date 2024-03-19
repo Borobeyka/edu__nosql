@@ -1,0 +1,47 @@
+[tool.black]
+target-version = ["py311"]
+line-length = 88
+
+[tool.isort]
+py_version = 312
+profile = "black"
+line_length = 88
+
+[tool.flake8]
+max-line-length = 88
+ignore = [
+    # writespace is fixed by black
+    "W291", # trailing whitespace
+    "W293", # blank line contains whitespace
+    "W503", # line break before binary operator
+    # line length is "fixed" by black
+    "E501", # line too long
+    "E701", # multiple statements on one line
+    # not relevant
+    "DAR101", # Missing parameter(s) in Docstring
+    "DAR201", #  Missing "Returns" in Docstring
+    "ABS101", # Relative import found
+]
+
+classmethod-decorators = [
+    "classmethod",  # built-in `@classmethod`
+    "validator",    # support for Pydantic `@validator`
+]
+
+per-file-ignores = "__init__.py:F401" # imported but unused
+
+
+[tool.pylint.'MESSAGES CONTROL']
+extension-pkg-whitelist = "pydantic"
+score = "no"
+disable = "all" # disable all checks by default
+enable = [
+    "E0611", # no-name-in-module
+]
+reports = "no"
+
+[tool.pytest.ini_options]
+env = [
+    "IS_TEST = 1",
+    "LOG_DIR = /tmp/",
+]
