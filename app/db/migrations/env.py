@@ -3,7 +3,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.db.base import DATABASE_URL
+from app.db.base import engine
 from app.db.models.base import Base
 
 # from private_gw.db.models import *
@@ -57,7 +57,7 @@ def run_migrations_offline():
     script output.
     """
     # url = config.get_main_option("sqlalchemy.url")
-    url = DATABASE_URL
+    url = engine.url
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -76,7 +76,7 @@ def run_migrations_online():
     and associate a connection with the context.
     """
     configuration = config.get_section(config.config_ini_section)
-    configuration["sqlalchemy.url"] = DATABASE_URL
+    configuration["sqlalchemy.url"] = engine.url
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",

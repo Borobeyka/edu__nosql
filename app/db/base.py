@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
+from sqlalchemy.pool import QueuePool
 from sqlalchemy.orm import sessionmaker
 
 from app.config.secrets import ENV
@@ -12,15 +13,6 @@ from app.service.json import json
 
 log = getLogger()
 
-
-DATABASE_URL = URL.create(
-    "postgresql+psycopg2",
-    username=ENV.get("PGPOOL_POSTGRES_USERNAME"),
-    password=ENV.get("PGPOOL_POSTGRES_PASSWORD"),
-    host=ENV.get("PGPOOL_HOST"),
-    port=ENV.get("PGPOOL_PORT"),
-    database=ENV.get("POSTGRESQL_DATABASE"),
-)
 REAL_DATABASE_PARAMS = {
     "pool_pre_ping": True,
     "echo": False,
@@ -29,12 +21,54 @@ REAL_DATABASE_PARAMS = {
     #  echo_pool: 'debug',
 }
 
-engine = create_engine(
-    DATABASE_URL,
-    **REAL_DATABASE_PARAMS,
-    json_serializer=json.dumps,
-    json_deserializer=json.loads,
+
+class CircularRoutingEngine:
+    def __init__(self, database_addresses, pool_recycle=3600, pool_size=10):
+        self.database_addresses = database_addresses
+        self.pool_recycle = pool_recycle
+        self.pool_size = pool_size
+        self.current_index = 0
+        self.engines = [self._create_engine(address) for address in database_addresses]
+
+    def _create_engine(self, address):
+        return create_engine(
+            address,
+            poolclass=QueuePool,
+            pool_recycle=self.pool_recycle,
+            **REAL_DATABASE_PARAMS,
+            json_serializer=json.dumps,
+            json_deserializer=json.loads,
+        )
+
+    def get_engine(self):
+        engine = self.engines[self.current_index]
+        self.current_index = (self.current_index + 1) % len(self.engines)
+        return engine
+
+
+def create_circular_routing_engine(database_addresses, **kv):
+    return CircularRoutingEngine(database_addresses, **kv)
+
+
+DATABASE_URL_1 = URL.create(
+    "postgresql+psycopg2",
+    username=ENV.get("PGPOOL_POSTGRES_USERNAME"),
+    password=ENV.get("PGPOOL_POSTGRES_PASSWORD"),
+    host=ENV.get("PGPOOL_HOST_1"),
+    port=ENV.get("PGPOOL_PORT_1"),
+    database=ENV.get("POSTGRESQL_DATABASE"),
 )
+DATABASE_URL_2 = URL.create(
+    "postgresql+psycopg2",
+    username=ENV.get("PGPOOL_POSTGRES_USERNAME"),
+    password=ENV.get("PGPOOL_POSTGRES_PASSWORD"),
+    host=ENV.get("PGPOOL_HOST_2"),
+    port=ENV.get("PGPOOL_PORT_2"),
+    database=ENV.get("POSTGRESQL_DATABASE"),
+)
+
+
+engine = create_circular_routing_engine([DATABASE_URL_1, DATABASE_URL_2]).get_engine()
 NewSession = sessionmaker(bind=engine)
 
 
