@@ -111,7 +111,7 @@ services:
       - REPMGR_NODE_NETWORK_NAME=pg-2
 
   pg-3:
-    container_name: pg-13
+    container_name: pg-3
     image: bitnami/postgresql-repmgr:14
     ports:
       - 5432

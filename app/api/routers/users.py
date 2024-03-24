@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from fastapi_redis_cache import cache
 
 from app.api.schemas import schema
 from app.db.base import NewSession, delete_sql, insert_sql, select_sql, update_sql
@@ -20,6 +21,7 @@ def users_create(data: schema.UserCreate):
 
 
 @router.get("/")
+@cache(expire=30)
 def users_read(data: schema.UserRead = Depends()):
     query = select_sql(
         "users",

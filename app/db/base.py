@@ -3,8 +3,8 @@ from typing import Dict, List, Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
-from sqlalchemy.pool import QueuePool
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import QueuePool
 
 from app.config.secrets import ENV
 from app.service.json import json
@@ -70,6 +70,8 @@ DATABASE_URL_2 = URL.create(
 
 engine = create_circular_routing_engine([DATABASE_URL_1, DATABASE_URL_2]).get_engine()
 NewSession = sessionmaker(bind=engine)
+
+# fmt: off
 
 
 def select_sql(
@@ -159,3 +161,4 @@ def update_sql(
         ),
     ]
     return " ".join([cmd for cmd in query if cmd])
+# fmt: on

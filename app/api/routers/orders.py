@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from fastapi_redis_cache import cache
 
 from app.api.schemas import schema
 from app.db.base import NewSession, delete_sql, insert_sql, select_sql, update_sql
@@ -20,6 +21,7 @@ def orders_create(data: schema.OrderCreate):
 
 
 @router.get("/")
+@cache(expire=30)
 def orders_read(data: schema.OrderRead = Depends()):
     query = select_sql(
         "orders",
