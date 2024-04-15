@@ -18,10 +18,14 @@ class SQLCondition(BaseModel):
         for field in self.model_fields.keys():
             value = getattr(self, field)
             if any(
-                [not value, not field.startswith("new_"), field in ["limit", "offset"]]
+                [
+                    value is None,
+                    not field.startswith("new_"),
+                    field in ["limit", "offset"],
+                ]
             ):
                 continue
-            print(f"{field=}")
+            # print(f"{field=}")
             values[field.split("_", maxsplit=1)[1]] = value
         return values
 
@@ -57,17 +61,19 @@ class OrderCreate(BaseModel):
 
 
 class OrderRead(SQLCondition):
-    order_id: Optional[int] = None
+    order_id: Optional[str] = None
     user_id: Optional[int] = None
     item_id: Optional[int] = None
 
 
-class OrderUpdate(OrderRead):
+class OrderUpdate(SQLCondition):
+    order_id: Optional[str] = None
     new_user_id: Optional[int] = None
     new_item_id: Optional[int] = None
 
 
-class OrderDelete(OrderRead): ...
+class OrderDelete(SQLCondition):
+    order_id: Optional[str] = None
 
 
 # --- ORDERS ---

@@ -13,6 +13,7 @@ def items_create(data: schema.ItemCreate):
     query = insert_sql(
         "items",
         values=data.model_dump(),
+        returns="*",
     )
     with NewSession() as db:
         row = db.execute(query).fetchone()
@@ -35,11 +36,7 @@ def items_read(data: schema.ItemRead = Depends()):
 
 @router.put("/")
 def items_update(data: schema.ItemUpdate):
-    query = update_sql(
-        "items",
-        values=data.values(),
-        where=data.where(),
-    )
+    query = update_sql("items", values=data.values(), where=data.where(), returns="*")
     with NewSession() as db:
         rows = db.execute(query).fetchall()
         db.commit()

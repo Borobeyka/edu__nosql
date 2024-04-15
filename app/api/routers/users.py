@@ -10,10 +10,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.post("/")
 def users_create(data: schema.UserCreate):
-    query = insert_sql(
-        "users",
-        values=data.model_dump(),
-    )
+    query = insert_sql("users", values=data.model_dump(), returns="*")
     with NewSession() as db:
         row = db.execute(query).fetchone()
         db.commit()
@@ -39,6 +36,7 @@ def users_update(data: schema.UserUpdate):
         "users",
         values=data.values(),
         where=data.where(),
+        returns="*",
     )
     with NewSession() as db:
         rows = db.execute(query).fetchall()

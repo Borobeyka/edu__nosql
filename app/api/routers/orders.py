@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from fastapi_redis_cache import cache
 
 from app.api.schemas import schema
-from app.db.base import NewSession, delete_sql, insert_sql, select_sql, update_sql
+from app.db.base import CassandraSession
 from app.db.models import Order
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
@@ -10,49 +10,37 @@ router = APIRouter(prefix="/orders", tags=["Orders"])
 
 @router.post("/")
 def orders_create(data: schema.OrderCreate):
-    query = insert_sql(
-        "orders",
-        values=data.model_dump(),
-    )
-    with NewSession() as db:
-        row = db.execute(query).fetchone()
-        db.commit()
-    return Order(**row)
+    data = data.model_dump()
+    with CassandraSession() as db:
+        db.execute(f"INSERT INTO orders (order_id, user_id, item_id) VALUES (uuid(), {data["user_id"]}, {data["item_id"]});")
+    return "ok"
 
 
 @router.get("/")
 @cache(expire=30)
 def orders_read(data: schema.OrderRead = Depends()):
-    query = select_sql(
-        "orders",
-        where=data.where(),
-    )
-    with NewSession() as db:
-        rows = db.execute(query).fetchall()
-        db.commit()
+    query = "SELECT * FROM orders"
+    if data.where():
+        query += f"WHERE {"AND ".join(f"{field}={value}" for field, value in data.where().items())}"
+    with CassandraSession() as db:
+        rows = db.execute(query).all()
     return [Order(**row) for row in rows]
 
 
 @router.put("/")
 def orders_update(data: schema.OrderUpdate):
-    query = update_sql(
-        "orders",
-        values=data.values(),
-        where=data.where(),
-    )
-    with NewSession() as db:
-        rows = db.execute(query).fetchall()
-        db.commit()
-    return [Order(**row) for row in rows]
+    query = "UPDATE orders SET "
+    query += f"{", ".join([f"{field}={value}" for field, value in data.values().items()])}"
+    query += f" WHERE {", ".join([f"{field}={value}" for field, value in data.where().items()])}"
+    with CassandraSession() as db:
+        db.execute(query)
+    return "ok"
 
 
 @router.delete("/")
 def orders_delete(data: schema.OrderDelete):
-    query = delete_sql(
-        "orders",
-        where=data.where(),
-    )
-    with NewSession() as db:
-        rows = db.execute(query).fetchall()
-        db.commit()
-    return [Order(**row) for row in rows]
+    query = "DELETE FROM orders"
+    query += f" WHERE {", ".join([f"{field}={value}" for field, value in data.where().items()])}"
+    with CassandraSession() as db:
+        db.execute(query)
+    return "ok"

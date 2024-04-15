@@ -15,5 +15,6 @@ RUN pip install -r /code/requirements.txt
 
 WORKDIR /code
 COPY start.sh /code/
+COPY . /code/
 
 CMD ["/bin/bash"]

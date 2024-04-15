@@ -12,9 +12,9 @@ services:
       - ./.env
     environment:
       - FA_PORT=${FA_PORT_1}
-    command: "sh start.sh"
     volumes:
       - ./:/code
+    command: "sh start.sh"
 
   app_2:
     container_name: app_2
@@ -145,6 +145,20 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    
+  redis:
+    container_name: redis
+    image: "redis:alpine"
+    ports:
+      - 6379:6379
+  
+  cassandra_1:
+    container_name: cassandra_1
+    image: cassandra:latest
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra_1:/var/lib/cassandra
 
 volumes:
   pg_0_data:
@@ -155,3 +169,4 @@ volumes:
     driver: local
   pg_3_data:
     driver: local
+  cassandra_1:

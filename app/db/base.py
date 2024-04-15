@@ -1,6 +1,8 @@
 from logging import getLogger
 from typing import Dict, List, Optional
 
+from cassandra.cluster import Cluster
+from cassandra.query import dict_factory
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
@@ -48,6 +50,21 @@ class CircularRoutingEngine:
 
 def create_circular_routing_engine(database_addresses, **kv):
     return CircularRoutingEngine(database_addresses, **kv)
+
+
+class CassandraSession:
+    def __enter__(self):
+        self.cluster = Cluster(["cassandra_1"])
+        self.session = self.cluster.connect()
+        self.session.execute("CREATE KEYSPACE IF NOT EXISTS space WITH replication = {'class': 'NetworkTopologyStrategy', 'datacenter1': 3}")
+        self.session.execute("USE space")
+        self.session.execute("CREATE TABLE IF NOT EXISTS orders (order_id UUID PRIMARY KEY, user_id int, item_id int);")
+        self.session.row_factory = dict_factory
+        return self.session
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.session.shutdown()
+        self.cluster.shutdown()
 
 
 DATABASE_URL_1 = URL.create(
@@ -102,7 +119,7 @@ def insert_sql(
     ignore: bool = False,
     conflict_fields: Optional[List[str]] = None,
     conflict_fields_update: Optional[Dict[str, str | int | float]] = None,
-    returns: List[str] | str = "*"
+    returns: Optional[List[str] | str] = None
 ) -> Optional[str]:
     if not table or not values:
         return None
@@ -147,7 +164,7 @@ def update_sql(
     *,
     values: Dict[str, str | int | float],
     where: Optional[Dict[str, str | int | float]] = None,
-    returns: List[str] | str = "*"
+    returns: Optional[List[str] | str] = None
 ):
     if not table or not values:
         return None
